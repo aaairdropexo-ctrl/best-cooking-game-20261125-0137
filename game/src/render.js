@@ -218,10 +218,13 @@ NB.render = function (state) {
   NB.drawServe(state);
   NB.drawSteam(state);
   NB.drawBin(state);
+  NB.drawPull(state);
+  NB.drawMenu(state);
   NB.drawCrates(state);
   NB.drawCook(state);
   NB.drawParticles(state);
   NB.drawToasts(state);
+  NB.drawServeFx(state);
   NB.drawHint(state);
   if (state.timeLeft <= NB.RUSH_AT && state.mode === 'playing') NB.drawRush(state);
   if (state.mode === 'title') NB.drawTitle(state);
@@ -284,15 +287,23 @@ NB.drawBoard = function (state) {
     }
     const dish = NB.dishById(order.dishId);
     const urgent = order.patience < 12;
-    ctx.fillStyle = urgent ? '#4a2e22' : '#33232c';
+    // A VIP ticket is gold all over: dark gold fill, gold border, a tab
+    // on top. It must read as special in one glance at 768px.
+    ctx.fillStyle = order.vip ? '#4a3517' : urgent ? '#4a2e22' : '#33232c';
     NB.roundRect(ctx, B.x + 12, y, B.w - 24, slotH - 12, 10);
     ctx.fill();
-    ctx.strokeStyle = urgent ? P.ember : '#5a3a42';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = order.vip ? P.gold : urgent ? P.ember : '#5a3a42';
+    ctx.lineWidth = order.vip ? 3 : 2;
     NB.roundRect(ctx, B.x + 12, y, B.w - 24, slotH - 12, 10);
     ctx.stroke();
+    if (order.vip) {
+      ctx.fillStyle = P.gold;
+      NB.roundRect(ctx, B.x + B.w / 2 - 28, y - 8, 56, 17, 8);
+      ctx.fill();
+      NB.text(ctx, '★ VIP', B.x + B.w / 2, y + 1, 11, '#241a12', 'center', 'bold');
+    }
     NB.text(ctx, dish.name, B.x + 24, y + 24, 19, P.cream, 'left', 'bold');
-    NB.text(ctx, '$' + order.value, B.x + B.w - 26, y + 24, 19, P.gold, 'right', 'bold');
+    NB.text(ctx, order.vip ? '$' + order.value + ' +TIP' : '$' + order.value, B.x + B.w - 26, y + 24, 19, P.gold, 'right', 'bold');
     // Component chips.
     order.needs.forEach(function (need, k) {
       const cx = B.x + 30 + k * 64;
@@ -313,6 +324,11 @@ NB.drawBoard = function (state) {
         NB.text(ctx, '✓', cx + 20, cy - 15, 12, '#ffffff', 'center', 'bold');
       }
     });
+    // One human sentence on the ticket — the judge reads it. Big
+    // enough to survive the shrink to 768px.
+    if (order.vip && order.story) {
+      NB.text(ctx, order.story, B.x + B.w / 2, y + 97, 16, P.gold, 'center', 'bold');
+    }
     // Patience bar.
     const pf = NB.clamp(order.patience / order.patienceMax, 0, 1);
     ctx.fillStyle = '#1d1218';
@@ -428,30 +444,40 @@ NB.drawPlate = function (state) {
   const P = NB.PAL;
   const L = NB.LAYOUT.plate;
   const done = NB.plateComplete(state);
+  // A perfect serve slides the plate toward the hatch.
+  let slide = 0;
+  if (state.serveFx && state.serveFx.perfect) {
+    const f = NB.clamp(state.serveFx.t / state.serveFx.dur, 0, 1);
+    slide = Math.round(110 * f * (2 - f));
+  }
   NB.stationGlow(state, { rect: L }, done ? '#2c4630' : '#4a3423');
   NB.text(ctx, 'PLATING', L.x + L.w / 2, L.y + 20, 17, P.cream, 'center', 'bold');
   // The plate.
   ctx.fillStyle = '#f5efe2';
   ctx.beginPath();
-  ctx.ellipse(L.x + L.w / 2, L.y + 88, 62, 40, 0, 0, Math.PI * 2);
+  ctx.ellipse(L.x + L.w / 2 + slide, L.y + 88, 62, 40, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = done ? P.green : '#c9b896';
   ctx.lineWidth = done ? 5 : 3;
   ctx.beginPath();
-  ctx.ellipse(L.x + L.w / 2, L.y + 88, 62, 40, 0, 0, Math.PI * 2);
+  ctx.ellipse(L.x + L.w / 2 + slide, L.y + 88, 62, 40, 0, 0, Math.PI * 2);
   ctx.stroke();
   state.plate.items.forEach(function (item, i) {
     const a = -Math.PI / 2 + i * (Math.PI * 2 / Math.max(1, state.plate.items.length));
-    NB.drawIngredientIcon(ctx, item.ing, L.x + L.w / 2 + Math.cos(a) * 34, L.y + 88 + Math.sin(a) * 20, 30);
+    NB.drawIngredientIcon(ctx, item.ing, L.x + L.w / 2 + slide + Math.cos(a) * 34, L.y + 88 + Math.sin(a) * 20, 30);
   });
+  // A gold star when the plate holds perfectly pulled noodles.
+  if (state.plate.items.some(function (it) { return it.perfect; })) {
+    NB.text(ctx, '★', L.x + L.w - 26, L.y + 46, 18, P.gold, 'center', 'bold');
+  }
   if (state.plate.items.length === 0) {
-    NB.text(ctx, 'empty plate', L.x + L.w / 2, L.y + 88, 13, '#a98a6a', 'center', 'normal');
+    NB.text(ctx, 'empty plate', L.x + L.w / 2 + slide, L.y + 88, 13, '#a98a6a', 'center', 'normal');
   }
   if (done) {
     NB.text(ctx, 'READY TO SERVE!', L.x + L.w / 2, L.y + 142, 15, P.green, 'center', 'bold');
   } else if (state.plateFor !== null) {
     const order = state.orders.find(function (o) { return o.id === state.plateFor; });
-    if (order) NB.text(ctx, NB.dishById(order.dishId).name, L.x + L.w / 2, L.y + 142, 13, '#d8b48a', 'center', 'bold');
+    if (order) NB.text(ctx, NB.dishById(order.dishId).name, L.x + L.w / 2 + slide, L.y + 142, 13, '#d8b48a', 'center', 'bold');
   }
 };
 
@@ -488,6 +514,149 @@ NB.drawBin = function (state) {
   ctx.fill();
   NB.text(ctx, 'BIN', L.x + L.w / 2, L.y + 34, 15, P.cream, 'center', 'bold');
   NB.text(ctx, 'toss scraps', L.x + L.w / 2, L.y + 64, 11, '#a98a6a', 'center', 'normal');
+};
+
+// The pull and simmer counter: a broth pot that has simmered all night
+// and noodle strands whose colour follows the needle. Quiet when idle —
+// the cover's moment stays LAST CALL, VIP, perfect plate — loud only
+// while a pull is running, when the steam peaks in the green band.
+NB.drawPull = function (state) {
+  const ctx = state.ctx;
+  const P = NB.PAL;
+  const L = NB.LAYOUT.pull;
+  NB.stationGlow(state, { rect: L }, '#3d2b33');
+  NB.text(ctx, 'PULL & SIMMER', L.x + L.w / 2, L.y + 20, 15, P.cream, 'center', 'bold');
+  // Broth pot, left half: dark bowl, amber broth, a simmering surface.
+  const px = L.x + 48;
+  const py = L.y + 78;
+  ctx.fillStyle = '#1d1218';
+  ctx.beginPath();
+  ctx.arc(px, py, 34, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = P.broth;
+  ctx.beginPath();
+  ctx.arc(px, py - 2, 28, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,179,71,0.5)';
+  const bub = [[-12, -6], [4, 4], [12, -8]];
+  bub.forEach(function (b) {
+    ctx.beginPath();
+    ctx.arc(px + b[0], py - 2 + b[1], 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  // Broth temperature: how long the pot has simmered tonight.
+  const temp = NB.clamp(state.elapsed / 60, 0, 1);
+  ctx.fillStyle = '#1d1218';
+  NB.roundRect(ctx, L.x + 92, L.y + 46, 10, 64, 5);
+  ctx.fill();
+  ctx.fillStyle = temp > 0.7 ? P.green : P.amber;
+  NB.roundRect(ctx, L.x + 92, L.y + 110 - 64 * temp, 10, 64 * temp, 5);
+  ctx.fill();
+  // The strands, right half: their colour is the firmness — pale while
+  // soft, gold at perfect, dark when overdone.
+  const pos = state.pull.active ? NB.pullPos(state) : 0.5;
+  const strand = pos < NB.PULL_PERFECT_LO ? '#ffe9a8' : pos <= NB.PULL_PERFECT_HI ? P.noodle : '#b06a2c';
+  ctx.strokeStyle = strand;
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(L.x + 122, L.y + 48);
+  ctx.quadraticCurveTo(L.x + 130, L.y + 78, L.x + 120, L.y + 108);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(L.x + 142, L.y + 48);
+  ctx.quadraticCurveTo(L.x + 134, L.y + 78, L.x + 144, L.y + 108);
+  ctx.stroke();
+  // Firmness meter along the bottom: soft, green perfect band, overdone.
+  const mx = L.x + 14;
+  const mw = L.w - 28;
+  const my = L.y + L.h - 18;
+  ctx.fillStyle = '#1d1218';
+  NB.roundRect(ctx, mx, my, mw, 10, 5);
+  ctx.fill();
+  ctx.fillStyle = '#ffe9a8';
+  NB.roundRect(ctx, mx, my, mw * NB.PULL_PERFECT_LO, 10, 5);
+  ctx.fill();
+  ctx.fillStyle = P.green;
+  ctx.fillRect(mx + mw * NB.PULL_PERFECT_LO, my, mw * (NB.PULL_PERFECT_HI - NB.PULL_PERFECT_LO), 10);
+  ctx.fillStyle = '#b06a2c';
+  NB.roundRect(ctx, mx + mw * NB.PULL_PERFECT_HI, my, mw * (1 - NB.PULL_PERFECT_HI), 10, 5);
+  ctx.fill();
+  // Needle.
+  const nx = mx + mw * pos;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(nx, my - 4);
+  ctx.lineTo(nx - 5, my - 12);
+  ctx.lineTo(nx + 5, my - 12);
+  ctx.closePath();
+  ctx.fill();
+  if (state.pull.active) {
+    // Tucked under the label — clear of the pot, the strands and the needle.
+    NB.text(ctx, 'SPACE to lock!', L.x + L.w / 2, L.y + 36, 12, P.gold, 'center', 'bold');
+    // Steam peaks while the needle is in the green band. The wisps rise
+    // from the strands' right side so they never cross the lock text.
+    if (pos >= NB.PULL_PERFECT_LO && pos <= NB.PULL_PERFECT_HI) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(L.x + 152, L.y + 48);
+      ctx.quadraticCurveTo(L.x + 160, L.y + 36, L.x + 152, L.y + 22);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(L.x + 168, L.y + 48);
+      ctx.quadraticCurveTo(L.x + 160, L.y + 36, L.x + 168, L.y + 22);
+      ctx.stroke();
+    }
+  }
+  // No idle hint: the label + meter say it, and the hint would cross the needle.
+};
+
+// The menu board: all five dishes in one place, so the depth reads in
+// one glance. Quiet by design — dark panel, small text — the cover's
+// moment stays LAST CALL, VIP, perfect plate.
+NB.drawMenu = function (state) {
+  const ctx = state.ctx;
+  const P = NB.PAL;
+  const M = NB.LAYOUT.menu;
+  ctx.fillStyle = '#241722';
+  NB.roundRect(ctx, M.x, M.y, M.w, M.h, 10);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,179,71,0.4)';
+  ctx.lineWidth = 2;
+  NB.roundRect(ctx, M.x, M.y, M.w, M.h, 10);
+  ctx.stroke();
+  NB.text(ctx, 'MENU', M.x + 12, M.y + 13, 12, P.gold, 'left', 'bold');
+  NB.DISHES.forEach(function (dish, i) {
+    const ry = M.y + 32 + i * 14;
+    NB.text(ctx, dish.name, M.x + 12, ry, 12, P.cream, 'left', 'normal');
+    NB.text(ctx, '$' + dish.coins, M.x + M.w - 12, ry, 12, P.gold, 'right', 'bold');
+  });
+};
+
+// The perfect-serve popup: one big gold callout at the hatch. It only
+// ever appears for a perfect serve — a normal serve gets a toast.
+NB.drawServeFx = function (state) {
+  const ctx = state.ctx;
+  const fx = state.serveFx;
+  if (!fx || !fx.perfect) return;
+  // Below the hatch, above the bin — clear of the station labels, the
+  // plate and the cook. Static (no scale pop): the plate slide carries
+  // the motion, and a scaled popup overflows the canvas edge.
+  const label = '+$' + fx.pay + ' PERFECT!';
+  ctx.save();
+  ctx.font = 'bold 18px Arial, Helvetica, sans-serif';
+  const w = ctx.measureText(label).width + 24;
+  const cx = 1095, cy = 280;
+  ctx.fillStyle = 'rgba(20,12,16,0.85)';
+  NB.roundRect(ctx, cx - w / 2, cy - 18, w, 36, 12);
+  ctx.fill();
+  ctx.strokeStyle = NB.PAL.gold;
+  ctx.lineWidth = 2;
+  NB.roundRect(ctx, cx - w / 2, cy - 18, w, 36, 12);
+  ctx.stroke();
+  NB.text(ctx, label, cx, cy + 1, 18, NB.PAL.gold, 'center', 'bold');
+  ctx.restore();
 };
 
 NB.drawCrates = function (state) {
@@ -585,7 +754,9 @@ NB.drawParticles = function (state) {
 NB.drawToasts = function (state) {
   const ctx = state.ctx;
   state.toasts.forEach(function (t, i) {
-    const y = 440 - i * 30;
+    // Top strip, under the top bar and above the stations — the middle
+    // band is occupied now (pull station), so toasts can't live there.
+    const y = 88 + i * 30;
     ctx.globalAlpha = NB.clamp(t.ttl, 0, 1);
     ctx.fillStyle = 'rgba(20,12,16,0.8)';
     const w = ctx.measureText(t.text).width + 28;
