@@ -20,16 +20,33 @@ orders against the clock while the dinner rush keeps escalating.
    prep path (none / chop / cook / chop+cook); 2 wok burners for parallel
    cooking; burn risk if food sits too long; heat bars that cool as a
    dish waits + combo multiplier; spawn rate and patience tighten late
-   in the shift.
+   in the shift. **Power-up:** one gold VIP ticket (30% chance after
+   45s, only one at a time, 0.55× patience, $12 tip if served with
+   patience left / $4 if late, one human sentence — "for the night-shift
+   nurse", and "back again — same as last night" once served); a Pull &
+   Simmer station (firmness sweep, green perfect band 0.35–0.65, broth
+   temperature gauge, noodles change colour pale → gold → dark, steam
+   peaks in the band — locking in the green marks the noodles perfect,
+   +$4 on serve); a menu board listing all 5 dishes + prices in one
+   place. The VIP is the one human touch; the pull is the one new
+   mechanic. Both are visible in the cover and in the shots.
    Dishes: Golden Broth Bowl, Midnight Noodles, Garden Noodles,
    Ember Chicken Bowl, House Special.
 3. **Feel / polish** — click-or-keyboard stations answer at once, chop and
    wok progress rings, a big central shift timer, a calm LAST CALL sign
    in the final stretch, steam curls, a noodle-drying rack, serve bell,
-   toasts, particles, WebAudio beeps.
+   toasts, particles, WebAudio beeps. **Power-up:** a perfect serve
+   ALWAYS fires the full package — plate slides toward the hatch, "+$X
+   PERFECT!" popup, rising chime, steam burst — while a normal serve is
+   just a small sound; a VIP arrival has its own two-note chime. Shots
+   2–4 are one journey: the same VIP order travels chop → wok → serve,
+   its ticket in all three, progress visible.
 4. **Look / originality** — an original midnight noodle bar, not a burger
    joint clone: warm lamps, wood counters, hand-drawn canvas food icons,
-   big readable labels. No commercial game copied.
+   big readable labels. No commercial game copied. **Power-up:** one
+   moment, not a busy kitchen — the cover reads as LAST CALL + one VIP +
+   one perfect plate; the darkest pole in a field of bright cartoon
+   kitchens (dark darks, warm golds, sharpened, not neutralised).
 5. **Structure** — one clear job per file: config, recipes, orders,
    kitchen, input, render, audio, main. Names say what each file does.
 
@@ -38,6 +55,12 @@ orders against the clock while the dinner rush keeps escalating.
   system, saved high scores, customer characters walking in. The loop
   (grab → chop → wok → plate → serve) is the whole game; everything else
   is garnish.
+- Cut in the power-up round: shop/bowl customisation (invisible in one
+  screenshot), multi-stage secret recipe + fail-forward (too big for the
+  time), a 6-slot boiler (too big), a scaled-up perfect popup (overflowed
+  the canvas edge and covered the station labels — replaced by a static
+  popup below the hatch), the pull station's idle hint text (crossed the
+  needle and the pot).
 - Kept: 5 dishes (the 5th costs little once the recipe table exists),
   2 burners (parallel cooking is the depth), burn risk (the tension).
 
