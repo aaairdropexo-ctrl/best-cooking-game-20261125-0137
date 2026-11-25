@@ -47,6 +47,13 @@ NB.stationList = function () {
     id: 'bin', kind: 'bin', label: 'BIN',
     rect: L.bin, approach: { x: L.bin.x + L.bin.w / 2, y: L.bin.y + L.bin.h + 30 }
   });
+  // Noodle pull and broth simmer: hand-pull cooked noodles to the
+  // perfect firmness. A timing station, not a timer — the needle sweeps
+  // and the strand changes colour as it passes soft, perfect, overdone.
+  stations.push({
+    id: 'pull', kind: 'pull', label: 'PULL & SIMMER',
+    rect: L.pull, approach: { x: L.pull.x + L.pull.w / 2, y: L.pull.y + L.pull.h + 30 }
+  });
   return stations;
 };
 
@@ -85,7 +92,7 @@ NB.canCook = function (item) {
 };
 
 NB.sendCookTo = function (state, station) {
-  if (state.chop.active) return;
+  if (state.chop.active || state.pull.active) return;
   state.cook.tx = station.approach.x;
   state.cook.ty = station.approach.y;
   state.cook.pending = station.id;
@@ -149,6 +156,21 @@ NB.useStation = function (state, st) {
     NB.playSound('sizzle');
     return;
   }
+  if (st.kind === 'pull') {
+    if (state.pull.active) {
+      NB.lockPull(state);
+      return;
+    }
+    if (state.chop.active) return;
+    const idx = hand.findIndex(function (it) { return it.ing === 'noodles' && it.prep === 'cooked'; });
+    if (idx < 0) {
+      NB.addToast(state, 'Bring cooked noodles here to pull', '#ffb347');
+      return;
+    }
+    state.pull = { active: true, item: hand.splice(idx, 1)[0], t: 0 };
+    NB.playSound('sizzle');
+    return;
+  }
   if (st.kind === 'plate') {
     for (let i = 0; i < hand.length; i++) {
       const hit = NB.orderNeeding(state, hand[i]);
@@ -196,6 +218,38 @@ NB.clearPlate = function (state) {
   state.plateFor = null;
 };
 
+// Where the pull needle sits right now: a triangle wave, 0 at the soft
+// end, 1 at the overdone end, sweeping back and forth.
+NB.pullPos = function (state) {
+  const phase = (state.pull.t / NB.PULL_SWEEP) % 2;
+  return phase < 1 ? phase : 2 - phase;
+};
+
+// Lock the pull where the needle is. Green band: the noodles come out
+// perfect and pay a bonus at serve. Soft or overdone: still good noodles,
+// just no bonus — a miss costs the bonus, never the dish.
+NB.lockPull = function (state) {
+  if (!state.pull.active) return;
+  const pos = NB.pullPos(state);
+  const item = state.pull.item;
+  state.pull = { active: false, item: null, t: 0 };
+  if (pos >= NB.PULL_PERFECT_LO && pos <= NB.PULL_PERFECT_HI) {
+    item.perfect = true;
+    if (state.cook.hand.length < NB.HAND_SLOTS) state.cook.hand.push(item);
+    NB.addToast(state, 'Perfect pull! +$4 at serve', '#ffd166');
+    NB.burst(state, 660, 380, '#ffd166', 12);
+    NB.playSound('ready');
+  } else if (pos < NB.PULL_PERFECT_LO) {
+    if (state.cook.hand.length < NB.HAND_SLOTS) state.cook.hand.push(item);
+    NB.addToast(state, 'Too soft — still good noodles', '#ffb347');
+    NB.playSound('plate');
+  } else {
+    if (state.cook.hand.length < NB.HAND_SLOTS) state.cook.hand.push(item);
+    NB.addToast(state, 'Overworked — no bonus this time', '#ffb347');
+    NB.playSound('plate');
+  }
+};
+
 NB.updateKitchen = function (state, dt) {
   // Chopping job.
   if (state.chop.active) {
@@ -207,6 +261,14 @@ NB.updateKitchen = function (state, dt) {
       state.chop = { active: false, item: null, t: 0, dur: NB.CHOP_SECONDS };
       NB.playSound('chopDone');
     }
+  }
+  // Noodle pull: the needle keeps sweeping until the cook locks it.
+  if (state.pull.active) state.pull.t += dt;
+  // Perfect-serve celebration: the plate slides and the popup lives
+  // for half a second, then clears itself.
+  if (state.serveFx) {
+    state.serveFx.t += dt;
+    if (state.serveFx.t >= state.serveFx.dur) state.serveFx = null;
   }
   // Wok burners.
   for (const burner of state.woks) {
