@@ -49,8 +49,13 @@ NB.handleClick = function (state, x, y) {
   if (state.paused) return;
   const st = NB.stationAt(state, x, y);
   if (st) {
+    // Clicking the pull station while a pull is running locks it.
+    if (st.kind === 'pull' && state.pull.active) {
+      NB.lockPull(state);
+      return;
+    }
     NB.sendCookTo(state, st);
-  } else if (!state.chop.active) {
+  } else if (!state.chop.active && !state.pull.active) {
     // Clicking the floor just walks there.
     state.cook.tx = NB.clamp(x, NB.LAYOUT.floor.x + 20, NB.LAYOUT.floor.x + NB.LAYOUT.floor.w - 20);
     state.cook.ty = NB.clamp(y, 300, 500);
@@ -98,7 +103,7 @@ NB.handleKey = function (state, k) {
 
 // Keyboard walking, applied every frame while keys are held.
 NB.updateKeyboardMove = function (state, dt) {
-  if (state.mode !== 'playing' || state.paused || state.chop.active) return;
+  if (state.mode !== 'playing' || state.paused || state.chop.active || state.pull.active) return;
   const keys = NB.input.keys;
   let dx = 0;
   let dy = 0;
