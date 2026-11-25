@@ -47,6 +47,8 @@ NB.playSound = function (name) {
   else if (name === 'sizzle') { NB.tone(state, 240, 0.25, 'sawtooth', 0.05); NB.tone(state, 320, 0.2, 'sawtooth', 0.04, 0.1); }
   else if (name === 'plate') NB.tone(state, 740, 0.07, 'triangle', 0.1);
   else if (name === 'ready') { NB.tone(state, 880, 0.12, 'sine', 0.12); NB.tone(state, 1318, 0.16, 'sine', 0.1, 0.1); }
+  else if (name === 'vip') { NB.tone(state, 1046, 0.12, 'triangle', 0.12); NB.tone(state, 1568, 0.2, 'triangle', 0.12, 0.09); }
+  else if (name === 'perfect') { NB.tone(state, 784, 0.09, 'triangle', 0.12); NB.tone(state, 1046, 0.09, 'triangle', 0.12, 0.08); NB.tone(state, 1568, 0.2, 'triangle', 0.12, 0.16); }
   else if (name === 'serve') { NB.tone(state, 784, 0.1, 'triangle', 0.12); NB.tone(state, 1046, 0.12, 'triangle', 0.12, 0.08); NB.tone(state, 1318, 0.16, 'triangle', 0.1, 0.16); }
   else if (name === 'lost') NB.tone(state, 220, 0.3, 'sawtooth', 0.08);
   else if (name === 'burnt') { NB.tone(state, 160, 0.2, 'square', 0.08); NB.tone(state, 120, 0.25, 'square', 0.08, 0.12); }
