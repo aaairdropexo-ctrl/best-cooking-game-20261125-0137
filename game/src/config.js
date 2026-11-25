@@ -25,6 +25,22 @@ NB.CHOP_SECONDS = 1.4;
 NB.COOK_SECONDS = 3.0;
 NB.READY_WINDOW = 4.0;
 
+// Noodle pull: a timing sweep at the pull station. The needle sweeps a
+// firmness meter; locking it inside the green band pulls the noodles
+// perfectly. Perfect pulls pay a bonus at serve time.
+NB.PULL_SWEEP = 2.4;
+NB.PULL_PERFECT_LO = 0.35;
+NB.PULL_PERFECT_HI = 0.65;
+NB.PERFECT_BONUS = 4;
+
+// VIP orders: a regular who hates waiting. Serve a VIP while its heat
+// is still high and the tip is big; serve it late and the tip shrinks.
+NB.VIP_AFTER = 45;
+NB.VIP_CHANCE = 0.3;
+NB.VIP_PATIENCE = 0.55;
+NB.VIP_TIP = 12;
+NB.VIP_TIP_SMALL = 4;
+
 // Cook movement and hands.
 NB.COOK_SPEED = 430;
 NB.HAND_SLOTS = 2;
@@ -76,6 +92,8 @@ NB.LAYOUT = {
   plate: { x: 920, y: 100, w: 170, h: 160 },
   serve: { x: 1120, y: 100, w: 146, h: 160 },
   bin: { x: 920, y: 300, w: 110, h: 76 },
+  pull: { x: 560, y: 330, w: 200, h: 140 },
+  menu: { x: 780, y: 380, w: 260, h: 100 },
   crates: { x: 340, y: 520, w: 912, h: 112 },
   hint: { x: 0, y: 652, w: 1280, h: 68 }
 };
